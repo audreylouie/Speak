@@ -1,0 +1,121 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Canvas</title>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+    </head>
+    <style>
+        body {
+            overflow: hidden;
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+
+<body onload="init()">
+    <button id="permission">Motion Device</button>
+    <canvas id="theCanvas"></canvas>
+
+    <script>
+        let lastMessageTime = 0;
+        const minMessageInterval = 1000;
+        let spoken = false;
+        let motionPermissionGranted = false;
+        let permissionButton = document.getElementById("permission");
+        var c = document.getElementById("theCanvas");
+        var canvas = c.getContext("2d");
+       permissionButton.addEventListener("click",permission);
+
+       //get permission from user
+       // Modify your permission function
+        function permission() {
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            // Permission granted, add devicemotion event listener
+                            // This part was originally inside the 'if' block
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                alert("Device motion event not detected.");
+            }
+
+            // Move these lines outside the 'if' block
+            window.addEventListener("devicemotion", handleMotion);
+            speak("");
+            draw();
+        }
+
+   
+        
+        function speak(text){
+        const synth = window.speechSynthesis;
+        const utterance = new SpeechSynthesisUtterance(text);
+        synth.speak(utterance);
+        }
+
+        
+        let amplitude = 5;
+        let frequency = 0;    
+
+        // Draw solid right triangles covering the entire canvas with the wave effect
+        function draw() {
+            // Resize the canvas to match the window's dimensions
+            c.width = window.innerWidth;
+            c.height = window.innerHeight;
+
+            // Clear the canvas
+            canvas.clearRect(0, 0, c.width, c.height);
+
+            // Draw solid right triangles with the wave effect
+            for (let x = 0; x < c.width; x += 30) {
+                for (let y = 0; y < c.height; y += 30) {
+                    canvas.beginPath();
+                    canvas.moveTo(x, y);
+
+                    // Calculate the y-coordinate of the triangle's top vertex with the wave effect
+                    let yWithWave = y + amplitude * Math.sin(frequency * x);
+
+                    canvas.lineTo(x + 30, yWithWave);
+                    canvas.lineTo(x, y + 30);
+
+                    canvas.closePath();
+                    canvas.fillStyle = "black"; 
+                    canvas.fill();
+                }
+            }
+        }
+
+        //handle motion event
+        function handleMotion(event) {
+            amplitude = 2 * event.accelerationIncludingGravity.y; 
+            frequency = 0.03 + event.accelerationIncludingGravity.x / 300; 
+            draw();
+
+            const currentTime = Date.now();
+
+            if (amplitude > 8 && !spoken && (currentTime - lastMessageTime >= minMessageInterval)) {
+                speak("hey, you're shaking me");
+                spoken = true;
+                lastMessageTime = currentTime;
+            } else if (amplitude <= 8) {
+                spoken = false;
+            }
+
+        }
+        function init() {
+            c.width = window.innerWidth;
+            c.height = window.innerHeight;
+            draw();
+            window.addEventListener('devicemotion', handleMotion, true);
+        }
+        
+    </script>
+</body>
+
+</html>
